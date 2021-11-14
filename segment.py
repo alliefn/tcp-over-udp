@@ -1,3 +1,4 @@
+from typing import NewType
 import hexa
 import binary
 
@@ -39,7 +40,7 @@ class Segment:
 		[PARAMS]
 			num : int
 		'''
-		self.seqNum = hexa.inttohex(num)
+		self.seqNum = hexa.inttohex(num,8)
 
 	def getAckNum(self) -> int:
 		'''
@@ -57,7 +58,7 @@ class Segment:
 		[PARAMS]
 			num : int
 		'''
-		self.ackNum = hexa.inttohex(num)
+		self.ackNum = hexa.inttohex(num,8)
 
 	def getBinFlag(self) -> str:
 		'''
@@ -66,7 +67,7 @@ class Segment:
 		[RETURNS]
 			str : binary form of the flags field
 		'''
-		binFlagAndEmpty = hexa.tobin(self.flagsAndEmpty)
+		binFlagAndEmpty = hexa.tobin(self.flagsAndEmpty,16)
 		binFlag = binFlagAndEmpty[:8]
 		return binFlag
 
@@ -89,7 +90,7 @@ class Segment:
 			binFlag = "00000000"
 
 		intFlagAndEmpty = binary.toint(binFlag + "00000000")
-		self.flagsAndEmpty = hexa.inttohex(intFlagAndEmpty)
+		self.flagsAndEmpty = hexa.inttohex(intFlagAndEmpty,4)
 
 	def getCheckSum(self) -> int:
 		'''
@@ -100,10 +101,12 @@ class Segment:
 		'''
 		return hexa.toint(self.checkSum)
 
-	def compileCheckSum(self):
+	def calculateCheckSum(self):
 		'''
 		[DESC]
 			Method to calculate the checksum field using 16 bit one's complement
+		[RETURNS]
+			str : hexstring of the checksum field
 		'''
 		seqNumChunks = hexa.split2byte(self.seqNum)
 		ackNumChunks = hexa.split2byte(self.ackNum)
@@ -116,9 +119,18 @@ class Segment:
 			res = 0
 			for chunk in allChunks:
 				res ^= hexa.toint(chunk)
-			allChunks = hexa.split2byte(hexa.inttohex(res))
+			allChunks = hexa.split2byte(hexa.inttohex(res,4))
 
-		self.checkSum = allChunks[0]
+		checkSumBinary = binary.onescomplement(hexa.tobin(allChunks[0],16))
+		checkSumInt = binary.toint(checkSumBinary)
+		return hexa.inttohex(checkSumInt,4)
+
+	def compileCheckSum(self):
+		'''
+		[DESC]
+			Method to assign the cjecksum field with the checksum value
+		'''
+		self.checkSum = self.calculateCheckSum()
 
 	def loadPayLoad(self,payLoad : str):
 		'''
@@ -131,7 +143,6 @@ class Segment:
 		# one hexstring character == 0.5 byte, so the maximum payLoad hexstring size is 8192
 		if len(payLoad) > PAYLOAD_MAX_SIZE * 2:
 			raise Exception("Payload cannot exceed more than 4096 bytes or 32768 bit")
-
 		self.payLoad = payLoad
 
 	def construct(self):
@@ -144,13 +155,19 @@ class Segment:
 		result = self.seqNum + self.ackNum + self.flagsAndEmpty + self.checkSum + self.payLoad
 		return result
 
-	def build(self,constructedSegment):
+	def build(self,constructedSegment : str) -> 'Segment':
 		'''
 		[DESC]
 			Method to convert hexstring segment into the object form
+		[PARAMS]
+			constructedSegment : str
+		[RETURNS]
+			Segment : the segment object
 		'''
 		self.seqNum = constructedSegment[:8]
 		self.ackNum = constructedSegment[8:16]
 		self.flagsAndEmpty = constructedSegment[16:20]
 		self.checkSum = constructedSegment[20:24]
 		self.payLoad = constructedSegment[24:]
+
+		return self

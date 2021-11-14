@@ -38,33 +38,45 @@ def toint(hexstring : str) -> int:
 	'''
 	return int(hexstring,16)
 
-def tobin(hexstring : str) -> str:
+def tobin(hexstring : str, formating : int) -> str:
 	'''
 	[DESC]
 		Function to convert a hexstring into the form of binary string (e.g. "01001100")
 	[PARAMS]
 		hexstring : str
+		formating : int
 	[RETURNS]
 		str : binary string form of the hexstring
 	'''
 	intval = toint(hexstring)
 	res = bin(intval)[2:]
-	if len(res)%2 == 1:
-		res = "0" + res
+	if len(res)%formating != 0:
+		res = "0" * (formating-len(res)%formating) + res
 	return res
 
-def inttohex(num : int) -> str:
+def inttohex(num : int, formating : int) -> str:
 	'''
 	[DESC]
 		Function to convert an integer into the form of hexstring
 	[PARAMS]
 		num : int
+		formating : int (2,4,8)
 	[RETURNS]
 		str : hexstring form of the integer number
 	'''
-	res = '{:02x}'.format(num)
-	if len(res)%2 == 1:
-		res = "0" + res
+	res = None
+	if formating == 2:
+		res = '{:02x}'.format(num)
+		if len(res)%2 == 1:
+			res = "0" + res
+	elif formating == 4:
+		res = '{:04x}'.format(num)
+		if len(res)%4 != 0:
+			res = "0" * (4-len(res)%4) + res
+	elif formating == 8:
+		res = '{:08x}'.format(num)
+		if len(res)%8 != 0:
+			res = "0" * (8-len(res)%8) + res
 	return res
 
 def split2byte(hexstring : str) -> List[str]:

@@ -40,3 +40,17 @@ def toint(binary : str) -> int:
 		int : python integer form of a binary string
 	'''
 	return int(binary,2)
+
+def onescomplement(binary : str) -> str:
+	'''
+	[DESC]
+		Function to revert every bit in the binary string (one's complement method)
+	[PARAMS]
+		binary : str
+	[RETURNS]
+		str : binary string
+	'''
+	result = ""
+	for b in binary:
+		result += revert(b)
+	return result

@@ -1,10 +1,49 @@
-import segment
+from segment import Segment
+import hexa
 
 '''
 This is a representation of TCP receiver in the form of python class.
 '''
 
 class Receiver:
+
+	def checkSumAlgorithm(self,segmentString : str) -> str:
+		'''
+		[DESC]
+			Method to check the checksum value of a segment
+		[PARAMS]
+			segmentString : str (segment in the form of hexstring)
+		[RETURNS]
+			str : checksum hexstring
+		'''
+		segment = Segment()
+		segment.build(segmentString)
+		seqNumChunks = hexa.split2byte(segment.seqNum)
+		ackNumChunks = hexa.split2byte(segment.ackNum)
+		flagsAndEmptyChunks = hexa.split2byte(segment.flagsAndEmpty)
+		checkSumChunk = hexa.split2byte(segment.checkSum)
+		payLoadChunks = hexa.split2byte(segment.payLoad)
+
+		allChunks = seqNumChunks + ackNumChunks + flagsAndEmptyChunks + checkSumChunk + payLoadChunks 
+
+		while len(allChunks) > 1:
+			res = 0
+			for chunk in allChunks:
+				res ^= hexa.toint(chunk)
+			allChunks = hexa.split2byte(hexa.inttohex(res,4))
+		return allChunks[0]
+
+	def isNotBroken(self,segmentString : str) -> bool:
+		'''
+		[DESC]
+			Method to check wether a segment is broken or not
+		[PARAMS]
+			segmentString : str (segment in the form of hexstring)
+		[RETURNS]
+			boolean : True if segnment is not broken, else False
+		'''
+		return self.checkSumAlgorithm(segmentString) == "ffff"
+
 	def isSynSegment(self,segment : Segment) -> bool:
 		'''
 		[DESC]
@@ -15,6 +54,7 @@ class Receiver:
 			boolean : True if segment is a SYN segment , else False
 		'''
 		binFlag = segment.getBinFlag()
+
 		return binFlag[6] == "1"
 
 	def isAckSegment(self,segment : Segment) -> bool:
