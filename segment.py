@@ -8,6 +8,7 @@ Every byte written in the form of hexadecimals or hexstring.
 '''
 
 PAYLOAD_MAX_SIZE = 4092 # bytes or 32768 bits
+PAYLOAD_MAX_HEXLENGTH = PAYLOAD_MAX_SIZE * 2
 
 ZERO_2BYTES = "0000"
 ZERO_4BYTES = ZERO_2BYTES*2
@@ -128,7 +129,7 @@ class Segment:
 	def compileCheckSum(self):
 		'''
 		[DESC]
-			Method to assign the cjecksum field with the checksum value
+			Method to assign the checksum field with the checksum value
 		'''
 		self.checkSum = self.calculateCheckSum()
 
@@ -141,9 +142,18 @@ class Segment:
 		'''
 
 		# one hexstring character == 0.5 byte, so the maximum payLoad hexstring size is 8192
-		if len(payLoad) > PAYLOAD_MAX_SIZE * 2:
+		if len(payLoad) > PAYLOAD_MAX_HEXLENGTH:
 			raise Exception("Payload cannot exceed more than 4096 bytes or 32768 bit")
 		self.payLoad = payLoad
+
+	def getPayLoad(self) -> str:
+		'''
+		[DESC]
+			Method returns the payload field
+		[RETURNS]
+			str : payLoad
+		'''
+		return self.payLoad
 
 	def construct(self):
 		'''

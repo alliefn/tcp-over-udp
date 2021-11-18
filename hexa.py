@@ -4,28 +4,28 @@ from typing import List
 Group of functions to handle hexstring.
 '''
 
-def encode(string : str) -> str:
+def encode(bytes_obj : bytes) -> str:
 	'''
 	[DESC]
 		Function to convert a string (e.g. "Hello World") into the form of hexstring
 	[PARAMS]
-		string : str
+		bytes_obj : bytes
 	[RETURNS]
 		str : hexstring form of the original string/text
 	'''
-	return "".join("{:02x}".format(ord(c)) for c in string)
+	return "".join([inttohex(i,2) for i in bytes_obj])
 
-def decode(hexstring : str) -> str:
+def decode(hexstring : str, encoding : str) -> bytes:
 	'''
 	[DESC]
 		Function to convert a hexstring (e.g. "ff00a3e8") into the form of regular string
 	[PARAMS]
 		hexstring : str
 	[RETURNS]
-		str : regular string
+		bytes : byte object
 	'''
 	bytes_obj = bytes.fromhex(hexstring)
-	return bytes_obj.decode("utf-8")
+	return bytes_obj
 
 def toint(hexstring : str) -> int:
 	'''
