@@ -7,7 +7,7 @@ This is a representation of TCP segment in the form of a python class.
 Every byte written in the form of hexadecimals or hexstring.
 '''
 
-PAYLOAD_MAX_SIZE = 4092 # bytes or 32768 bits
+PAYLOAD_MAX_SIZE = 32768 # bytes
 PAYLOAD_MAX_HEXLENGTH = PAYLOAD_MAX_SIZE * 2
 
 ZERO_2BYTES = "0000"
