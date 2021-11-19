@@ -19,5 +19,5 @@ class FileHandler:
 		'''
 		file_ = file.File(filePath)
 		dumpRes = pickle.dumps(file_) # byte obj
-		fileHexString =  hexa.encode(dumpRes) #str
+		fileHexString =  hexa.hexstring(dumpRes) #str
 		return fileHexString

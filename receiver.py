@@ -93,3 +93,10 @@ class Receiver:
 		'''
 		binFlag = segment.getBinFlag()
 		return binFlag == "00000000"
+
+	def receiveSegment(self,segmentByte : bytes) -> str:
+		'''
+		[DESC]
+			Method to receive segment
+		'''
+		return hexa.hexstring(segmentByte)

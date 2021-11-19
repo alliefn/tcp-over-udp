@@ -2,6 +2,7 @@ import math
 import file
 import filehandler
 import segment
+import hexa
 
 '''
 Representation of a TCP transmitter in the form of a python class
@@ -33,9 +34,9 @@ class Transmitter:
 			self.segmentQueue.append(s)
 			counter += 1
 
-	def transmitSegment(index : int) -> str: # incomplete
+	def transmitSegment(self,index : int) -> bytes:
 		'''
 		[DESC]
 			Method to send the segment in the form of hexstring
 		'''
-		return self.segmentQueue[index].construct()
+		return hexa.byte(self.segmentQueue[index].construct(),'utf-8')

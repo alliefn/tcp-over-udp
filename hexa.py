@@ -4,7 +4,7 @@ from typing import List
 Group of functions to handle hexstring.
 '''
 
-def encode(bytes_obj : bytes) -> str:
+def hexstring(bytes_obj : bytes) -> str:
 	'''
 	[DESC]
 		Function to convert a string (e.g. "Hello World") into the form of hexstring
@@ -15,10 +15,10 @@ def encode(bytes_obj : bytes) -> str:
 	'''
 	return "".join([inttohex(i,2) for i in bytes_obj])
 
-def decode(hexstring : str, encoding : str) -> bytes:
+def byte(hexstring : str, encoding : str) -> bytes:
 	'''
 	[DESC]
-		Function to convert a hexstring (e.g. "ff00a3e8") into the form of regular string
+		Function to convert a hexstring (e.g. "ff00a3e8") into the form of bytes
 	[PARAMS]
 		hexstring : str
 	[RETURNS]
