@@ -2,6 +2,8 @@ import socket
 import time
 import sys
 
+NUMBERS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
+
 '''
 Pseudocode:
 
@@ -24,10 +26,36 @@ Pseudocode:
 '''
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.bind(('',12345))
+if (len(sys.argv) > 1):
+	port = int(sys.argv[1])
+	print("Server started at port"+str(port)+"...")
 
-while True:
-	data, address = s.recvfrom(1024)
-	print("Received broadcast from: "+str(address))
-	print("Message: "+str(data))
+else:
+	print("Port number not specified. Run: 'python server.py <port-number>'")
+	exit()
+s.bind(('',port))
+
+def listen_broadcast():
+	print("Listening to broadcast address for clients.")
+	
+	clients = []
+
+	while True:
+		data, address = s.recvfrom(1024)
+		client = str(address[0])+":"+str(address[1])
+		clients.append(client)
+		print("[!] Client ("+client+") found")
+		cont = input("[?] Listen more? (y/n) ").lower()
+		if (cont == "n" or cont != "y"):
+			break
+	
 	print()
+	
+	list_clients(clients)
+
+def list_clients(clients):
+	print(NUMBERS[len(clients)].title()+" clients found:")
+	for i in range(len(clients)):
+		print(str(i+1)+". "+clients[i])
+
+listen_broadcast()

@@ -25,6 +25,6 @@ if (len(sys.argv) > 1):
 
 message = "Hello server"
 
-s.sendto(message.encode(),('127.0.0.1',12345))
+s.sendto(message.encode(),('127.0.0.1',1337))
 print("Sent broadcast: "+message)
 
