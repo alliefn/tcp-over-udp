@@ -1,3 +1,6 @@
+import socket
+import sys
+
 '''
 Pseudocode
 1. Program mengambil port dari input user (args)
@@ -10,3 +13,18 @@ Pseudocode
 5. Menyudahi koneksi dengan server
 6. Menutup program
 '''
+
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+host = socket.gethostname()
+print("Host: "+str(host))
+
+if (len(sys.argv) > 1):
+	port = sys.argv[1]
+	s.bind(('127.0.0.1', int(port)))
+
+message = "Hello server"
+
+s.sendto(message.encode(),('127.0.0.1',12345))
+print("Sent broadcast: "+message)
+

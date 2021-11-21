@@ -1,3 +1,7 @@
+import socket
+import time
+import sys
+
 '''
 Pseudocode:
 
@@ -18,3 +22,12 @@ Pseudocode:
 		- close koneksi bila sudah selesai
 6. Ulangi sampai pengguna menyelesaikan program server
 '''
+
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(('',12345))
+
+while True:
+	data, address = s.recvfrom(1024)
+	print("Received broadcast from: "+str(address))
+	print("Message: "+str(data))
+	print()
