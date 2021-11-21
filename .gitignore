@@ -1,3 +1,6 @@
+# Additionals
+.DS_STORE
+
 # Unit testing
 test.py
 
