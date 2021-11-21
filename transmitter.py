@@ -9,13 +9,14 @@ Representation of a TCP transmitter in the form of a python class
 '''
 
 class Transmitter:	
-	def __init__(self):
+	def __init__(self, counter_start=1):
 		'''
 		[DESC]
 			Default constructor, consist of some attribute:
 			- segmentQueue : queue of segments
 		'''
 		self.segmentQueue = []
+		self.counter_start = counter_start
 
 	def prepareSegment(self,filePath : str):
 		'''
@@ -26,11 +27,12 @@ class Transmitter:
 		'''
 		handler = filehandler.FileHandler()
 		fileHexString = handler.dumpFile(filePath)
-		counter = 1
+		counter = self.counter_start
 		for i in range(0,len(fileHexString),segment.PAYLOAD_MAX_HEXLENGTH):
 			s = segment.Segment()
 			s.setSeqNum(counter)
 			s.loadPayLoad(fileHexString[i:i + segment.PAYLOAD_MAX_HEXLENGTH])
+			s.switchFlag("DATA")
 			self.segmentQueue.append(s)
 			counter += 1
 
