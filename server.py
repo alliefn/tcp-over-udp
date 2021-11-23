@@ -5,6 +5,7 @@ import hexa
 import transmitter
 import receiver
 import random
+from connection import Connection
 
 NUMBERS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
 
@@ -30,13 +31,20 @@ Pseudocode:
 '''
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 if (len(sys.argv) > 1):
 	port = int(sys.argv[1])
 	print("Server started at port "+str(port)+"...")
-
 else:
-	print("Port number not specified. Run: 'python server.py <port-number>'")
+	print("Port number not specified. Run: 'python server.py <port-number> </path/to/file>'")
 	exit()
+
+if (len(sys.argv) > 2):
+	filepath = sys.argv[2]
+else:
+	print("File not specified. Run: 'python server.py <port-number> </path/to/file>'")
+	exit()
+
 s.bind(('127.0.0.1',port))
 
 def listen_broadcast():
@@ -47,7 +55,8 @@ def listen_broadcast():
 	while True:
 		data, address = s.recvfrom(1024)
 		client = str(address[0])+":"+str(address[1])
-		clients.append(address)
+		connectionObj = Connection(address[0], address[1], 0)
+		clients.append(connectionObj)
 		print("[!] Client ("+client+") found")
 		cont = input("[?] Listen more? (y/n) ").lower()
 		if (cont == "n" or cont != "y"):
@@ -60,35 +69,40 @@ def listen_broadcast():
 def list_clients(clients):
 	print(NUMBERS[len(clients)].title()+" clients found:")
 	for i in range(len(clients)):
-		print(str(i+1)+". "+str(clients[i][0])+":"+str(clients[i][1]))
+		print(str(i+1)+". "+str(clients[i].IP)+":"+str(clients[i].port))
 	
 	return clients
 
-def send_and_connect(clients):
+def send_and_connect(clients, filepath):
 	print("\nCommencing file transfer...")
 
+	# server menghubungi setiap client dan mengirim filenya
 	for client in clients:
-		connect(client)
+		connect(client, filepath)
 
-def connect(client):
-	IP = client[0]
-	port = client[1]
+	print("\n\nFiles sent. Closing connection...\n")
+
+	# server mengakhiri hubungan dengan setiap client
+	for client in clients:
+		closeConnection(client)
+
+def connect(clientConnection, filepath):
+	IP = clientConnection.IP
+	port = clientConnection.port
 
 	stage = "SEND_SYN"
 	server_seq_num = random.randint(0, 4294967295)
-	n_data_sent = 0
-	n_data_received = 0
+	clientConnection.server_seq_num = server_seq_num
 	fin = False
 
 	while not(fin):
+		# 1. server kirim SYN ke client untuk memulai koneksi
 		if (stage == "SEND_SYN"):
-			#send SYN
-
 			syn_packet = segment.Segment()
 			seq_num = server_seq_num #kirim random secure integer sebagai seq_num awal server
 
 			#--- Nanti set seq_num sama ack_num pake go-back-n ---#
-			n_data_sent += 1 #tambah satu karena mengirim paket SYN (kalo paket ACK saja tidak diinkremen)
+			clientConnection.n_data_sent += 1 #tambah satu karena mengirim paket SYN (kalo paket ACK saja tidak diinkremen)
 			#--- END ---#
 
 			syn_packet.switchFlag("SYN")
@@ -97,7 +111,11 @@ def connect(client):
 			message = hexa.byte(syn_packet.construct(),'utf-8')
 			s.sendto(message, (IP, port))
 
+			print("\nSYN sent to client "+IP+":"+str(port)+" with seq num: "+str(seq_num))
+
 			stage = "RECEIVE_SYN_ACK_SEND_ACK"
+		
+		# 2. server menerima SYN-ACK dari client, lalu mengirim ACK untuk acknowledge SYN tersebut
 		elif (stage == "RECEIVE_SYN_ACK_SEND_ACK"):
 			data, address = s.recvfrom(32777)
 			rec_packet = segment.Segment()
@@ -114,11 +132,10 @@ def connect(client):
 				ack_packet = segment.Segment()
 
 				#--- Nanti set seq_num sama ack_num pake go-back-n ---#
-				n_data_received += 1 #diinkremen karena menerima paket SYN
+				clientConnection.n_data_received += 1 #diinkremen karena menerima paket SYN
 
-				seq_num = server_seq_num + n_data_sent
-				ack_num = server_seq_num + n_data_received
-				curr_ack_num = ack_num
+				seq_num = server_seq_num + clientConnection.n_data_sent
+				ack_num = server_seq_num + clientConnection.n_data_received
 				#--- END ---#
 
 				ack_packet.switchFlag("ACK")
@@ -132,115 +149,127 @@ def connect(client):
 
 				stage = "SEND_FILE"
 
+		# 3. server mengirim file
 		elif (stage == "SEND_FILE"):
 			print("\nSending file...")
-			tm = transmitter.Transmitter(server_seq_num + n_data_received)
-			tm.prepareSegment("./test.txt")
+			tm = transmitter.Transmitter(server_seq_num + clientConnection.n_data_received)
+			tm.prepareSegment(filepath)
 
-			message = tm.transmitSegment(0)
-			s.sendto(message, (IP, port))
+			#--- SLIDING WINDOW, belum konkuren ---#
+			for i in range(len(tm.segmentQueue)):
 
-			r = receiver.Receiver()
-			rec_packet = segment.Segment()
+				#--- DRAFT TRANSMIT ---#
+				message = tm.transmitSegment(i) #kirim segmen ke-i
+				s.sendto(message, (IP, port))
 
-			rec_packet.build(r.receiveSegment(data))
-			n_data_sent += len(tm.segmentQueue[0].getPayLoad())
+				clientConnection.n_data_sent += len(tm.segmentQueue[i].getPayLoad())
+				#--- END ---#
 
-			stage = "FIN"
 
-		elif (stage == "FIN"):
-			data, address = s.recvfrom(32777)
-			rec_packet = segment.Segment()
-			r = receiver.Receiver()
+				#--- DRAFT RECEIVE ACK, belum konkuren ---#
+				data, address = s.recvfrom(32777)
+				rec_packet = segment.Segment()
+				r = receiver.Receiver()
 
-			rec_packet.build(r.receiveSegment(data))
+				rec_packet.build(r.receiveSegment(data))
 
-			if (r.isAckSegment(rec_packet)):
-				#server receive ACK of file sent
+				if (r.isAckSegment(rec_packet)):
+					#server receive ACK of file sent
+					seq_num0 = rec_packet.getSeqNum()
+					ack_num0 = rec_packet.getAckNum()
+
+					print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
+				
+			#--- SLIDING WINDOW ---#
+
+			# 4. urusan sudah selesai, server berhenti mengirim koneksi
+
+			fin = True
+
+
+def closeConnection(clientConnection):
+	IP = clientConnection.IP
+	port = clientConnection.port
+	server_seq_num = clientConnection.server_seq_num
+	fin = False
+
+	#--- CLOSING ---#
+
+	print("\nClosing connection with client: "+IP+":"+str(port))
+
+	#server send FIN to close connection
+
+	fin_packet = segment.Segment()
+
+	seq_num = server_seq_num + clientConnection.n_data_sent
+	ack_num = server_seq_num + clientConnection.n_data_received
+	
+	clientConnection.n_data_sent += 1
+
+	fin_packet.switchFlag("FIN")
+	fin_packet.setSeqNum(seq_num)
+	fin_packet.setAckNum(ack_num)
+
+	message = hexa.byte(fin_packet.construct(), 'utf-8')
+	s.sendto(message, (IP, port))
+
+	print("\nFIN sent to client "+IP+":"+str(port)+" with seq num: "+str(seq_num)+" and ack_num: "+str(ack_num))
+
+	while (fin != True):
+		data, address = s.recvfrom(32777)
+		rec_packet = segment.Segment()
+		r = receiver.Receiver()
+
+		rec_packet.build(r.receiveSegment(data))
+
+		if (r.isAckSegment(rec_packet)):
+			#server receive ACK of server's FIN
+			if ((address[0] == IP) and (address[1] == port)):
 				seq_num0 = rec_packet.getSeqNum()
 				ack_num0 = rec_packet.getAckNum()
 
 				print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
 
-				if ((address[0] == IP) and (address[1] == port)):
-					print("\nClosing connection with client: "+IP+":"+str(port))
+				data, address = s.recvfrom(32777)
+				rec_packet = segment.Segment()
+				r = receiver.Receiver()
 
-					#server send FIN to close connection
-					
-					fin_packet = segment.Segment()
+				rec_packet.build(r.receiveSegment(data))
 
-					#--- Nanti set seq_num sama ack_num pake go-back-n ---#
-					seq_num = server_seq_num + n_data_sent
-					ack_num = server_seq_num + n_data_received
-					
-					n_data_sent += 1
-					#--- END ---#
+				if (r.isFinSegment(rec_packet)):
+					#sender receive FIN to close connection
+					seq_num0 = rec_packet.getSeqNum()
+					ack_num0 = rec_packet.getAckNum()
 
-					fin_packet.switchFlag("FIN")
-					fin_packet.setSeqNum(seq_num)
-					fin_packet.setAckNum(ack_num)
+					if ((address[0] == IP) and (address[1] == port)):
+						#if correct client wants to close
 
-					message = hexa.byte(fin_packet.construct(), 'utf-8')
-					s.sendto(message, (IP, port))
+						print("\nFIN received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
 
-					print("\nFIN sent to client "+IP+":"+str(port)+" with seq num: "+str(seq_num)+" and ack_num: "+str(ack_num))
+						ack_packet = segment.Segment()
 
-					data, address = s.recvfrom(32777)
-					rec_packet = segment.Segment()
-					r = receiver.Receiver()
+						#--- Nanti set seq_num sama ack_num pake go-back-n ---#
+						clientConnection.n_data_received += 1
 
-					rec_packet.build(r.receiveSegment(data))
+						seq_num = server_seq_num + clientConnection.n_data_sent
+						ack_num = server_seq_num + clientConnection.n_data_received
+						#--- END ---#
 
-					if (r.isAckSegment(rec_packet)):
-						#server receive ACK of server's FIN
+						ack_packet.switchFlag("ACK")
+						ack_packet.setSeqNum(seq_num)
+						ack_packet.setAckNum(ack_num)
 
-						if ((address[0] == IP) and (address[1] == port)):
-							seq_num0 = rec_packet.getSeqNum()
-							ack_num0 = rec_packet.getAckNum()
+						message = hexa.byte(ack_packet.construct(), 'utf-8')
+						s.sendto(message, (IP, port))
 
-							print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
+						print("\nACK sent to client "+IP+":"+str(port)+" with seq_num: "+str(seq_num)+" and ack_num: "+str(ack_num))
 
-							data, address = s.recvfrom(32777)
-							rec_packet = segment.Segment()
-							r = receiver.Receiver()
+						fin = True #close connection
 
-							rec_packet.build(r.receiveSegment(data))
+						print("\nConnection with client "+IP+":"+str(port)+" closed.")
 
-							if (r.isFinSegment(rec_packet)):
-								#sender receive FIN to close connection
-								seq_num0 = rec_packet.getSeqNum()
-								ack_num0 = rec_packet.getAckNum()
-
-								print(address)
-
-								if ((address[0] == IP) and (address[1] == port)):
-									#if correct client wants to close
-
-									print("\nFIN received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
-
-									ack_packet = segment.Segment()
-
-									#--- Nanti set seq_num sama ack_num pake go-back-n ---#
-									n_data_received += 1
-
-									seq_num = server_seq_num + n_data_sent
-									ack_num = server_seq_num + n_data_received
-									#--- END ---#
-
-									ack_packet.switchFlag("ACK")
-									ack_packet.setSeqNum(seq_num)
-									ack_packet.setAckNum(ack_num)
-
-									message = hexa.byte(ack_packet.construct(), 'utf-8')
-									s.sendto(message, (IP, port))
-
-									print("\nACK sent to client "+IP+":"+str(port)+" with seq_num: "+str(seq_num)+" and ack_num: "+str(ack_num))
-
-									fin = True #close connection
-
-									print("\nConnection with client "+IP+":"+str(port)+" closed.")
-
+#--- Main ---#
 
 clients = listen_broadcast()
 
-send_and_connect(clients)
+send_and_connect(clients, filepath)

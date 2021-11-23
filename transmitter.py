@@ -16,7 +16,7 @@ class Transmitter:
 			- segmentQueue : queue of segments
 		'''
 		self.segmentQueue = []
-		self.counter_start = counter_start
+		self.counter = counter_start
 
 	def prepareSegment(self,filePath : str):
 		'''
@@ -27,14 +27,14 @@ class Transmitter:
 		'''
 		handler = filehandler.FileHandler()
 		fileHexString = handler.dumpFile(filePath)
-		counter = self.counter_start
 		for i in range(0,len(fileHexString),segment.PAYLOAD_MAX_HEXLENGTH):
 			s = segment.Segment()
-			s.setSeqNum(counter)
+			s.setSeqNum(self.counter)
 			s.loadPayLoad(fileHexString[i:i + segment.PAYLOAD_MAX_HEXLENGTH])
 			s.switchFlag("DATA")
 			self.segmentQueue.append(s)
-			counter += 1
+			self.counter += len(s.getPayLoad())
+			print(self.counter)
 
 	def transmitSegment(self,index : int) -> bytes:
 		'''
