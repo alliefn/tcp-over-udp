@@ -134,47 +134,51 @@ def connect(clientConnection, filepath):
 
 		# 3. server mengirim file
 		elif (stage == "SEND_FILE"):
-			print("\nSending file...")
+			print("\nConverting file into segments...\n")
 			tm = transmitter.Transmitter(server_seq_num + clientConnection.n_data_received)
 			tm.prepareSegment(filepath)
 
-			#--- SLIDING WINDOW, belum konkuren ---#
-			seq_base = seq_num
+			total_segment = tm.getTotalSegment()
+			print("Total segments: "+str(total_segment))
+
+			seq_base = tm.getFirstSegmentSeqNum()
+			print("Sequence base: "+str(seq_base))
+			print("Sequence number: "+str(seq_num))
+
 			N = int(input("\nEnter window size: "))
-			seq_max = N + 1 + seq_base
-			print(len(tm.segmentQueue))
-			if len(tm.segmentQueue) < N:
-				seq_max = len(tm.segmentQueue)
-			print(seq_max)
+			seq_max = seq_base + (N-1)*65536
+			print("Sequence max: "+str(seq_max))
+
 			while True:
-				print("hi")
 				# Transmit package where seq_base <= seq_num <= seq_max sequentially
-				while (seq_base < seq_max and tm.hasNextSegment()):
-					print("hiiii")
-					seq_num = tm.getNextSegment().getSeqNum()
-					print("h2")
-					print(seq_num)
-					print(seq_base)
-					print(seq_max)
-					if (seq_num >= seq_base and seq_num <= seq_max):
-						print("h1")
-						message = hexa.byte(tm.getNextSegment().construct(),'utf-8')
-						s.sendto(message, (IP, port))
-						clientConnection.n_data_sent += len(tm.getNextSegment().getPayload())
-						print("\nSending segment with seq num: "+str(seq_num))
-						seq_base += 1
-					print("waiting...")
-					data, address = s.recvfrom(32777)
+				i = 0
+				seq_num = seq_base
+				while (seq_base <= seq_num and seq_num <= seq_max and seq_num <= tm.getLastSegmentSeqNum() and tm.hasNextSegment()):
+					message = tm.transmitSegment(i)
+					s.sendto(message, (IP, port))
+					clientConnection.n_data_sent += len(tm.segmentQueue[i].getPayLoad())
+					print("\nSending segment " + str(i) + " with seq num: " + str(seq_num))
+
+					# Receive ACK for each package sent
+					data, address = s.recvfrom(4294967295)
 					rec_packet = segment.Segment()
 					r = receiver.Receiver()
-					# if you receive an ack number where ack_num > seq_base, then you 
+					rec_packet.build(r.receiveSegment(data))
+
 					if (r.isAckSegment(rec_packet)):
-						seq_num = rec_packet.getSeqNum()
 						ack_num = rec_packet.getAckNum()
-						print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num)+" and ack num: "+str(ack_num))
+						print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(rec_packet.getSeqNum())+" and ack num: "+str(ack_num))
+						# If an ack number is received where ack_num > seq_base, then...
 						if (ack_num > seq_base):
-							seq_max = (seq_max - seq_base) + ack_num
 							seq_base = ack_num
+							tm.segmentQueue.pop(0)
+					
+					seq_num += segment.PAYLOAD_MAX_HEXLENGTH
+					i += 1
+
+					if (seq_num > seq_max):
+						i = 0
+						seq_num = seq_base
 				fin = True
 				break
 

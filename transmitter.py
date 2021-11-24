@@ -34,7 +34,28 @@ class Transmitter:
 			s.switchFlag("DATA")
 			self.segmentQueue.append(s)
 			self.counter += len(s.getPayLoad())
-			print(self.counter)
+			print("[SEGMENT SEQ=" + str(len(self.segmentQueue)-1) + "]" + " created with seq num " + str(s.getSeqNum()))
+	
+	def getFirstSegmentSeqNum(self) -> int:
+		'''
+		[DESC]
+			Method to get the first sequence number of the segment
+		'''
+		return self.segmentQueue[0].getSeqNum()
+	
+	def getLastSegmentSeqNum(self) -> int:
+		'''
+		[DESC]
+			Method to get the last sequence number of the segment
+		'''
+		return self.segmentQueue[-1].getSeqNum()
+
+	def getTotalSegment(self) -> int:
+		'''
+		[DESC]
+			Method to get the total number of segments
+		'''
+		return len(self.segmentQueue)
 		
 	def hasNextSegment(self) -> bool:
 		'''
