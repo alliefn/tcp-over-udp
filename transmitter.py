@@ -35,6 +35,30 @@ class Transmitter:
 			self.segmentQueue.append(s)
 			self.counter += len(s.getPayLoad())
 			print(self.counter)
+		
+	def hasNextSegment(self) -> bool:
+		'''
+		[DESC]
+			Method to check if there is still segment to be transmitted
+		[PARAMS]
+			None
+		'''
+		return len(self.segmentQueue) != 0
+
+	def getNextSegment(self) -> segment.Segment:
+		'''
+		[DESC]
+			Method to get the next segment to be transmitted
+		'''
+		return self.segmentQueue.pop(0)
+
+	def getSeqNum(self) -> int:
+		'''
+		[DESC]
+			Method to get the sequence number of the next segment to be transmitted
+		'''
+		return self.segmentQueue[0].getSeqNum()
+
 
 	def transmitSegment(self,index : int) -> bytes:
 		'''

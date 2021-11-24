@@ -30,23 +30,6 @@ Pseudocode:
 6. Ulangi sampai pengguna menyelesaikan program server
 '''
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-if (len(sys.argv) > 1):
-	port = int(sys.argv[1])
-	print("Server started at port "+str(port)+"...")
-else:
-	print("Port number not specified. Run: 'python server.py <port-number> </path/to/file>'")
-	exit()
-
-if (len(sys.argv) > 2):
-	filepath = sys.argv[2]
-else:
-	print("File not specified. Run: 'python server.py <port-number> </path/to/file>'")
-	exit()
-
-s.bind(('127.0.0.1',port))
-
 def listen_broadcast():
 	print("Listening to broadcast address for clients.")
 
@@ -156,35 +139,46 @@ def connect(clientConnection, filepath):
 			tm.prepareSegment(filepath)
 
 			#--- SLIDING WINDOW, belum konkuren ---#
-			for i in range(len(tm.segmentQueue)):
+			seq_base = seq_num
+			N = int(input("\nEnter window size: "))
+			seq_max = N + 1 + seq_base
+			print(len(tm.segmentQueue))
+			if len(tm.segmentQueue) < N:
+				seq_max = len(tm.segmentQueue)
+			print(seq_max)
+			while True:
+				print("hi")
+				# Transmit package where seq_base <= seq_num <= seq_max sequentially
+				while (seq_base < seq_max and tm.hasNextSegment()):
+					print("hiiii")
+					seq_num = tm.getNextSegment().getSeqNum()
+					print("h2")
+					print(seq_num)
+					print(seq_base)
+					print(seq_max)
+					if (seq_num >= seq_base and seq_num <= seq_max):
+						print("h1")
+						message = hexa.byte(tm.getNextSegment().construct(),'utf-8')
+						s.sendto(message, (IP, port))
+						clientConnection.n_data_sent += len(tm.getNextSegment().getPayload())
+						print("\nSending segment with seq num: "+str(seq_num))
+						seq_base += 1
+					print("waiting...")
+					data, address = s.recvfrom(32777)
+					rec_packet = segment.Segment()
+					r = receiver.Receiver()
+					# if you receive an ack number where ack_num > seq_base, then you 
+					if (r.isAckSegment(rec_packet)):
+						seq_num = rec_packet.getSeqNum()
+						ack_num = rec_packet.getAckNum()
+						print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num)+" and ack num: "+str(ack_num))
+						if (ack_num > seq_base):
+							seq_max = (seq_max - seq_base) + ack_num
+							seq_base = ack_num
+				fin = True
+				break
 
-				#--- DRAFT TRANSMIT ---#
-				message = tm.transmitSegment(i) #kirim segmen ke-i
-				s.sendto(message, (IP, port))
-
-				clientConnection.n_data_sent += len(tm.segmentQueue[i].getPayLoad())
-				#--- END ---#
-
-
-				#--- DRAFT RECEIVE ACK, belum konkuren ---#
-				data, address = s.recvfrom(32777)
-				rec_packet = segment.Segment()
-				r = receiver.Receiver()
-
-				rec_packet.build(r.receiveSegment(data))
-
-				if (r.isAckSegment(rec_packet)):
-					#server receive ACK of file sent
-					seq_num0 = rec_packet.getSeqNum()
-					ack_num0 = rec_packet.getAckNum()
-
-					print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
-				
-			#--- SLIDING WINDOW ---#
-
-			# 4. urusan sudah selesai, server berhenti mengirim koneksi
-
-			fin = True
+			#--- END ---#
 
 
 def closeConnection(clientConnection):
@@ -270,6 +264,22 @@ def closeConnection(clientConnection):
 
 #--- Main ---#
 
-clients = listen_broadcast()
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+if (len(sys.argv) > 1):
+	port = int(sys.argv[1])
+	print("Server started at port "+str(port)+"...")
+else:
+	print("Port number not specified. Run: 'python server.py <port-number> </path/to/file>'")
+	exit()
+
+if (len(sys.argv) > 2):
+	filepath = sys.argv[2]
+else:
+	print("File not specified. Run: 'python server.py <port-number> </path/to/file>'")
+	exit()
+
+s.bind(('127.0.0.1',port))
+
+clients = listen_broadcast()
 send_and_connect(clients, filepath)
