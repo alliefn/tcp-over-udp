@@ -34,6 +34,7 @@ class Transmitter:
 			s.loadPayLoad(fileHexString[i:i + segment.PAYLOAD_MAX_HEXLENGTH])
 			s.switchFlag("DATA")
 			self.segmentQueue.append(s)
+			print("SEG",)
 			counter += 1
 
 	def transmitSegment(self,index : int) -> bytes:

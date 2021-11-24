@@ -97,6 +97,13 @@ while (not(fin)):
 
 				stage = "RECEIVE_DATA"
 	elif (stage == "RECEIVE_DATA"):
+		'''
+			Pemeriksaan apakah segmen yang diperoleh rusak atau tidak
+			Jika tidak rusak
+				Kirim acknowledgement kepada server
+			Jika rusak
+				abaikan
+		'''
 		data, address = s.recvfrom(32777)
 	
 		r = receiver.Receiver()
@@ -114,6 +121,8 @@ while (not(fin)):
 			if (seq_num0 == server_seq_num + n_data_received): #curr_ack_num masih sama karena sebelum ini, client belum menerima paket dengan payload
 				received_data = rec_packet.getPayLoad()
 				print("\nReceived data: "+received_data)
+				#print()
+				#print(hexa.byte(received_data,'utf-8'))
 
 				ack_packet = segment.Segment()
 

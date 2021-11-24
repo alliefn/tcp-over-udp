@@ -21,3 +21,18 @@ class FileHandler:
 		dumpRes = pickle.dumps(file_) # byte obj
 		fileHexString =  hexa.hexstring(dumpRes) #str
 		return fileHexString
+	
+	def restoreFile(self,filePath : str,fileHexString : str) -> str:
+		'''
+		[DESC]
+			Method to restore a file class from a hexstring
+		[PARAMS]
+			filePath : str
+			fileHexString : str
+		[RETURNS]
+			str : filePath
+		'''
+		file_ = file.File(filePath)
+		file_ = pickle.loads(hexa.hextobyte(fileHexString))
+		file_.save()
+		return filePath

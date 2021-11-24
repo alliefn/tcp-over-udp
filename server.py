@@ -29,16 +29,6 @@ Pseudocode:
 6. Ulangi sampai pengguna menyelesaikan program server
 '''
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-if (len(sys.argv) > 1):
-	port = int(sys.argv[1])
-	print("Server started at port "+str(port)+"...")
-
-else:
-	print("Port number not specified. Run: 'python server.py <port-number>'")
-	exit()
-s.bind(('127.0.0.1',port))
-
 def listen_broadcast():
 	print("Listening to broadcast address for clients.")
 
@@ -135,8 +125,10 @@ def connect(client):
 		elif (stage == "SEND_FILE"):
 			print("\nSending file...")
 			tm = transmitter.Transmitter(server_seq_num + n_data_received)
-			tm.prepareSegment("./test.txt")
-
+			'''
+				Go-Back-N-ARQ starts here
+			'''
+			tm.prepareSegment("./test.mp4")
 			message = tm.transmitSegment(0)
 			s.sendto(message, (IP, port))
 
@@ -145,7 +137,9 @@ def connect(client):
 
 			rec_packet.build(r.receiveSegment(data))
 			n_data_sent += len(tm.segmentQueue[0].getPayLoad())
-
+			'''
+				Go-Back-N-ARQ ends here
+			'''
 			stage = "FIN"
 
 		elif (stage == "FIN"):
@@ -241,6 +235,22 @@ def connect(client):
 									print("\nConnection with client "+IP+":"+str(port)+" closed.")
 
 
-clients = listen_broadcast()
+# Main Program
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+if (len(sys.argv) > 1):
+	port = int(sys.argv[1])
+	print("Server started at port "+str(port)+"...")
+
+else:
+	print("Port number not specified. Run: 'python server.py <port-number>'")
+	exit()
+
+hostname = socket.gethostname()
+print(hostname)
+local_ip = socket.gethostbyname(hostname)
+print(local_ip)
+
+s.bind(('127.0.0.1',port))
+clients = listen_broadcast()
 send_and_connect(clients)
