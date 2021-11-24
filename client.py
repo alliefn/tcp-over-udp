@@ -140,9 +140,6 @@ while (not(fin)):
 	# 3. client menerima data dari server
 	elif (stage == "RECEIVE_DATA"):
 
-		#--- RECEIVE DATA, belum konkuren ---#
-		req_num = 0
-
 		while True:
 			data, address = s.recvfrom(4294967295)
 		
@@ -150,12 +147,11 @@ while (not(fin)):
 			rec_packet = segment.Segment()
 			rec_packet.build(r.receiveSegment(data))
 
-			if (r.isDataSegment(rec_packet) and r.isNotBroken(rec_packet.getCheckSum())):
+			if (r.isDataSegment(rec_packet) and r.isNotBroken(rec_packet.calculateCheckSum())):
 				seq_num0 = rec_packet.getSeqNum()
 				ack_num0 = rec_packet.getSeqNum()
 
 				print("\nData received with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
-				req_num += 1
 
 				if (seq_num0 == serverConnection.server_seq_num + serverConnection.n_data_received): #curr_ack_num masih sama karena sebelum ini, client belum menerima paket dengan payload
 					received_data = rec_packet.getPayLoad()
@@ -180,7 +176,7 @@ while (not(fin)):
 					s.sendto(message, (address[0], address[1]))
 
 					print("\nACK sent with seq_num: "+str(seq_num)+" and ack num: "+str(ack_num))
-			elif (not r.isNotBroken(rec_packet.getCheckSum())):
+			elif (not r.isNotBroken(rec_packet.calculateCheckSum)):
 				print("Segment corrupted. Refuse to ack.")
 
 			elif (r.isFinSegment(rec_packet)):
