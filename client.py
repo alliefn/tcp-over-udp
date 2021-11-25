@@ -159,39 +159,39 @@ while (not(fin)):
 		repeat = True
 
 		while repeat:
-			data, address = s.recvfrom(32777)
+			data, address = s.recvfrom(65536)
 		
 			r = receiver.Receiver()
 			rec_packet = segment.Segment()
 			rec_packet.build(r.receiveSegment(data))
 
-			if (r.isDataSegment(rec_packet) and r.isNotBroken(rec_packet.checkSum)):
+			if (r.isDataSegment(rec_packet)):
 				seq_num0 = rec_packet.getSeqNum()
 				ack_num0 = rec_packet.getSeqNum()
 
 				print("\nData received with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
+				print(seq_num0)
+				print(serverConnection.server_seq_num)
+				print(serverConnection.n_data_received)
 
-				if (seq_num0 == serverConnection.server_seq_num + serverConnection.n_data_received):
-					received_data = rec_packet.getPayLoad()
-					print("\nReceived data from server")
+			#if (seq_num0 == serverConnection.server_seq_num + serverConnection.n_data_received):
+				received_data = rec_packet.getPayLoad()
+				print("\nReceived data from server")
 
-					# Save received data for file construction later
-					segmentPool.append(received_data)
+				# Save received data for file construction later
+				segmentPool.append(received_data)
 
-					ack_packet = segment.Segment()
-					serverConnection.n_data_received += len(received_data)
-					seq_num = serverConnection.server_seq_num + serverConnection.n_data_sent
-					ack_num = serverConnection.server_seq_num + serverConnection.n_data_received
-					ack_packet.switchFlag("ACK")
-					ack_packet.setSeqNum(seq_num)
-					ack_packet.setAckNum(ack_num)
+				ack_packet = segment.Segment()
+				serverConnection.n_data_received += len(received_data)
+				seq_num = serverConnection.server_seq_num + serverConnection.n_data_sent
+				ack_num = serverConnection.server_seq_num + serverConnection.n_data_received
+				ack_packet.switchFlag("ACK")
+				ack_packet.setSeqNum(seq_num)
+				ack_packet.setAckNum(ack_num)
 
-					message = hexa.byte(ack_packet.construct(),'utf-8')
-					s.sendto(message, (address[0], address[1]))
-					print("\nACK sent with seq_num: "+str(seq_num)+" and ack num: "+str(ack_num))
-
-			elif (not r.isNotBroken(rec_packet.checkSum)):
-				print("Segment corrupted.")
+				message = hexa.byte(ack_packet.construct(),'utf-8')
+				s.sendto(message, (address[0], address[1]))
+				print("\nACK sent with seq_num: "+str(seq_num)+" and ack num: "+str(ack_num))
 
 			elif (r.isFinSegment(rec_packet)):
 				saveFile(segmentPool, folderpath)

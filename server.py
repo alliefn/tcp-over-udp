@@ -143,6 +143,7 @@ def connect(clientConnection, filepath):
 			print("\nConverting file into segments...\n")
 			tm = transmitter.Transmitter(server_seq_num + clientConnection.n_data_received)
 			tm.prepareSegment(filepath)
+			print("\nFile converted. Sending file to client "+IP+":"+str(port)+"\n")
 
 			total_segment = tm.getTotalSegment()
 			print("Total segments: "+str(total_segment))
@@ -152,7 +153,7 @@ def connect(clientConnection, filepath):
 			print("Sequence number: "+str(seq_num))
 
 			#N = int(input("\nEnter window size: "))
-			N = 2
+			N = 1
 			seq_max = seq_base + (N-1)*65536
 			print("Sequence max: "+str(seq_max))
 
@@ -161,6 +162,7 @@ def connect(clientConnection, filepath):
 				i = 0
 				seq_num = seq_base
 				while (seq_base <= seq_num and seq_num <= seq_max and seq_num <= tm.getLastSegmentSeqNum() and tm.hasNextSegment()):
+					print(i)
 					message = tm.transmitSegment(i)
 					s.sendto(message, (IP, port))
 
@@ -183,11 +185,13 @@ def connect(clientConnection, filepath):
 							else:
 								seq_max = ack_num + (N-1)*65536
 							seq_base = ack_num
+							i = 0
 							tm.segmentQueue.pop(0)
 					
 					seq_num += segment.PAYLOAD_MAX_HEXLENGTH
-					i += 1
 
+					print(seq_num)
+					print(seq_max)
 					if (seq_num > seq_max):
 						i = 0
 						seq_num = seq_base

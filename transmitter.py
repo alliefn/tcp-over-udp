@@ -32,6 +32,7 @@ class Transmitter:
 			s.setSeqNum(self.counter)
 			s.loadPayLoad(fileHexString[i:i + segment.PAYLOAD_MAX_HEXLENGTH])
 			s.switchFlag("DATA")
+			s.compileCheckSum()
 			self.segmentQueue.append(s)
 			self.counter += len(s.getPayLoad())
 			print("[SEGMENT SEQ=" + str(len(self.segmentQueue)) + "]" + " created with seq num " + str(s.getSeqNum()))
