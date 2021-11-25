@@ -17,5 +17,5 @@ Tugas Besar Jaringan Komunikasi IF3130
 
 ```python3 client.py <port> <folder_tujuan_file>```
 
-3. <port> dapat diganti dalam kisaran angka 1300-1400 (Karena keterbatasan program)
+3. port dapat diganti dalam kisaran angka 1300-1400 (Karena keterbatasan program)
 4. Ikuti instruksi dalam program masing-masing.
