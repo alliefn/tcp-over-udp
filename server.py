@@ -37,10 +37,16 @@ def listen_broadcast():
 
 	while True:
 		data, address = s.recvfrom(1024)
+
+		message = "Yes"
+		s.sendto(message.encode(), ('127.0.0.1', address[1]))
+		print(address[0]+":"+str(address[1])+" connected.")
+
 		client = str(address[0])+":"+str(address[1])
 		connectionObj = Connection(address[0], address[1], 0)
 		clients.append(connectionObj)
 		print("[!] Client ("+client+") found")
+
 		cont = input("[?] Listen more? (y/n) ").lower()
 		if (cont == "n" or cont != "y"):
 			break
@@ -145,7 +151,8 @@ def connect(clientConnection, filepath):
 			print("Sequence base: "+str(seq_base))
 			print("Sequence number: "+str(seq_num))
 
-			N = int(input("\nEnter window size: "))
+			#N = int(input("\nEnter window size: "))
+			N = 2
 			seq_max = seq_base + (N-1)*65536
 			print("Sequence max: "+str(seq_max))
 
@@ -156,11 +163,12 @@ def connect(clientConnection, filepath):
 				while (seq_base <= seq_num and seq_num <= seq_max and seq_num <= tm.getLastSegmentSeqNum() and tm.hasNextSegment()):
 					message = tm.transmitSegment(i)
 					s.sendto(message, (IP, port))
+
 					clientConnection.n_data_sent += len(tm.segmentQueue[i].getPayLoad())
-					print("\nSending segment " + str(i) + " with seq num: " + str(seq_num))
+					print("\nSegment "+str(i+1)+" sent to client "+IP+":"+str(port)+" with seq num: "+str(seq_num))
 
 					# Receive ACK for each package sent
-					data, address = s.recvfrom(4294967295)
+					data, address = s.recvfrom(32777)
 					rec_packet = segment.Segment()
 					r = receiver.Receiver()
 					rec_packet.build(r.receiveSegment(data))
@@ -170,6 +178,10 @@ def connect(clientConnection, filepath):
 						print("\nACK received from client "+address[0]+":"+str(address[1])+" with seq num: "+str(rec_packet.getSeqNum())+" and ack num: "+str(ack_num))
 						# If an ack number is received where ack_num > seq_base, then...
 						if (ack_num > seq_base):
+							if (ack_num + (N-1)*65536 > tm.getLastSegmentSeqNum()):
+								seq_max = tm.getLastSegmentSeqNum()
+							else:
+								seq_max = ack_num + (N-1)*65536
 							seq_base = ack_num
 							tm.segmentQueue.pop(0)
 					
@@ -272,9 +284,13 @@ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 if (len(sys.argv) > 1):
 	port = int(sys.argv[1])
+	if (port > 1400 or port < 1300):
+		print("Port number must be between 1300 and 1400.")
+		exit()
 	print("Server started at port "+str(port)+"...")
 else:
 	print("Port number not specified. Run: 'python server.py <port-number> </path/to/file>'")
+	print("Note: Due to program limitations. Port must be between 1300 and 1400.")
 	exit()
 
 if (len(sys.argv) > 2):

@@ -3,6 +3,7 @@ import sys
 import segment
 import hexa
 import receiver
+import time
 from connection import Connection
 import pickle
 
@@ -47,9 +48,13 @@ print("Host: "+str(host))
 
 if (len(sys.argv) > 1):
 	port = sys.argv[1]
+	if (int(port) > 1400 or int(port) < 1300):
+		print("Port number must be between 1300 and 1400")
+		sys.exit()
 	s.bind(('127.0.0.1', int(port)))
 else:
 	print("Port number not specified. Run: 'python client.py <port-number> </path/to/folder>'")
+	print("Note: Due to program limitations. Port must be between 1300 and 1400.")
 	exit()
 
 if (len(sys.argv) > 2):
@@ -60,12 +65,24 @@ else:
 
 #--- Send broadcast
 
-message = "Hello server"
+port_found = False
+for port_ in range(1300,1401):
+	try:
+		s.sendto(str(port_).encode(), ('127.0.0.1', port_))
+		data, addr = s.recvfrom(1024)
+		if (data.decode() == "Yes" and int(port_) != int(port)):
+			# Found server
+			print("Server found at port "+str(port_))
+			port_found = True
+			time.sleep(0.5)
+			print("Awaiting server actions... Please wait.")
+			break
+	except:
+		pass
 
-s.sendto(message.encode(),('127.0.0.1',1337))
-print("Sent broadcast: "+message)
-
-
+if (not port_found):
+	print("No server responded. Please try again later.")
+	exit()
 
 #--- TCP over UDP, receive file from server
 
@@ -139,52 +156,47 @@ while (not(fin)):
 
 	# 3. client menerima data dari server
 	elif (stage == "RECEIVE_DATA"):
+		repeat = True
 
-		while True:
-			data, address = s.recvfrom(4294967295)
+		while repeat:
+			data, address = s.recvfrom(32777)
 		
 			r = receiver.Receiver()
 			rec_packet = segment.Segment()
 			rec_packet.build(r.receiveSegment(data))
 
-			if (r.isDataSegment(rec_packet) and r.isNotBroken(rec_packet.calculateCheckSum())):
+			if (r.isDataSegment(rec_packet) and r.isNotBroken(rec_packet.checkSum)):
 				seq_num0 = rec_packet.getSeqNum()
 				ack_num0 = rec_packet.getSeqNum()
 
 				print("\nData received with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
 
-				if (seq_num0 == serverConnection.server_seq_num + serverConnection.n_data_received): #curr_ack_num masih sama karena sebelum ini, client belum menerima paket dengan payload
+				if (seq_num0 == serverConnection.server_seq_num + serverConnection.n_data_received):
 					received_data = rec_packet.getPayLoad()
 					print("\nReceived data from server")
 
+					# Save received data for file construction later
 					segmentPool.append(received_data)
 
 					ack_packet = segment.Segment()
-
-					#--- Nanti set seq_num sama ack_num pake go-back-n ---#
-					serverConnection.n_data_received += len(received_data) #tambah jumlah bit dalam payload
-
+					serverConnection.n_data_received += len(received_data)
 					seq_num = serverConnection.server_seq_num + serverConnection.n_data_sent
 					ack_num = serverConnection.server_seq_num + serverConnection.n_data_received
-					#--- END ---#
-
 					ack_packet.switchFlag("ACK")
 					ack_packet.setSeqNum(seq_num)
 					ack_packet.setAckNum(ack_num)
 
 					message = hexa.byte(ack_packet.construct(),'utf-8')
 					s.sendto(message, (address[0], address[1]))
-
 					print("\nACK sent with seq_num: "+str(seq_num)+" and ack num: "+str(ack_num))
-			elif (not r.isNotBroken(rec_packet.calculateCheckSum)):
-				print("Segment corrupted. Refuse to ack.")
+
+			elif (not r.isNotBroken(rec_packet.checkSum)):
+				print("Segment corrupted.")
 
 			elif (r.isFinSegment(rec_packet)):
-				#if server send FIN
-
 				saveFile(segmentPool, folderpath)
-
 				stage = "CLOSE_CONNECTION"
+				repeat = False
 				break
 
 	# 4. server menutup koneksi, client mengikuti
