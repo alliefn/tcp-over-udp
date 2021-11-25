@@ -1,8 +1,8 @@
 import math
-import file
-import filehandler
-import segment
-import hexa
+import utility.file as file
+import utility.filehandler as filehandler
+import utility.segment as segment
+import utility.hexa as hexa
 
 '''
 Representation of a TCP transmitter in the form of a python class

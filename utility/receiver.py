@@ -1,5 +1,5 @@
-from segment import Segment
-import hexa
+from utility.segment import Segment
+import utility.hexa as hexa
 
 '''
 This is a representation of TCP receiver in the form of python class.

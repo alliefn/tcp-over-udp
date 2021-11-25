@@ -1,6 +1,6 @@
 import pickle
-import file
-import hexa
+import utility.file as file
+import utility.hexa as hexa
 import math
 
 '''

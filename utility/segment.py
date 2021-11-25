@@ -1,6 +1,6 @@
 from typing import NewType
-import hexa
-import binary
+import utility.hexa as hexa
+import utility.binary as binary
 
 '''
 This is a representation of TCP segment in the form of a python class.

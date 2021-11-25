@@ -1,10 +1,10 @@
 import socket
 import sys
-import segment
-import hexa
-import receiver
+import utility.segment as segment
+import utility.hexa as hexa
+import utility.receiver as receiver
 import time
-from connection import Connection
+from utility.connection import Connection
 import pickle
 
 '''

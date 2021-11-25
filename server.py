@@ -1,11 +1,11 @@
 import socket
 import sys
-import segment
-import hexa
-import transmitter
-import receiver
+import utility.segment as segment
+import utility.hexa as hexa
+import utility.transmitter as transmitter
+import utility.receiver as receiver
 import random
-from connection import Connection
+from utility.connection import Connection
 
 NUMBERS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
 
