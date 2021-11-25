@@ -165,7 +165,10 @@ while (not(fin)):
 			rec_packet = segment.Segment()
 			rec_packet.build(r.receiveSegment(data))
 
-			if (r.isDataSegment(rec_packet)):
+			if (r.isDataSegment(rec_packet) and r.isNotBroken(r.receiveSegment(data))):
+				if (not r.isNotBroken(r.receiveSegment(data))):
+					print("\nPacket received is broken, resending...")
+					continue
 				seq_num0 = rec_packet.getSeqNum()
 				ack_num0 = rec_packet.getSeqNum()
 
