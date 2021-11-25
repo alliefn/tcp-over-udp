@@ -96,6 +96,7 @@ def connect(clientConnection, filepath):
 
 			syn_packet.switchFlag("SYN")
 			syn_packet.setSeqNum(seq_num)
+			syn_packet.compileCheckSum()
 
 			message = hexa.byte(syn_packet.construct(),'utf-8')
 			s.sendto(message, (IP, port))
@@ -130,6 +131,7 @@ def connect(clientConnection, filepath):
 				ack_packet.switchFlag("ACK")
 				ack_packet.setSeqNum(seq_num)
 				ack_packet.setAckNum(ack_num)
+				ack_packet.compileCheckSum()
 
 				message = hexa.byte(ack_packet.construct(),'utf-8')
 				s.sendto(message, (IP, port))
@@ -162,13 +164,15 @@ def connect(clientConnection, filepath):
 				i = 0
 				seq_num = seq_base
 				while (seq_base <= seq_num and seq_num <= seq_max and seq_num <= tm.getLastSegmentSeqNum() and tm.hasNextSegment()):
-					print(i)
-					message = tm.transmitSegment(i)
+					# print(i)
+					# message = tm.transmitSegment(i)
+					message = tm.transmitSegment(0)
 					s.sendto(message, (IP, port))
 
-					clientConnection.n_data_sent += len(tm.segmentQueue[i].getPayLoad())
+					clientConnection.n_data_sent += len(tm.segmentQueue[0].getPayLoad())
+					# clientConnection.n_data_sent += len(tm.segmentQueue[i].getPayLoad())
 					print("\nSegment "+str(i+1)+" sent to client "+IP+":"+str(port)+" with seq num: "+str(seq_num))
-
+					i += 1
 					# Receive ACK for each package sent
 					data, address = s.recvfrom(32777)
 					rec_packet = segment.Segment()
@@ -185,13 +189,13 @@ def connect(clientConnection, filepath):
 							else:
 								seq_max = ack_num + (N-1)*65536
 							seq_base = ack_num
-							i = 0
+							# i = 0
 							tm.segmentQueue.pop(0)
 					
 					seq_num += segment.PAYLOAD_MAX_HEXLENGTH
 
-					print(seq_num)
-					print(seq_max)
+					# print(seq_num)
+					# print(seq_max)
 					if (seq_num > seq_max):
 						i = 0
 						seq_num = seq_base
@@ -223,6 +227,7 @@ def closeConnection(clientConnection):
 	fin_packet.switchFlag("FIN")
 	fin_packet.setSeqNum(seq_num)
 	fin_packet.setAckNum(ack_num)
+	fin_packet.compileCheckSum()
 
 	message = hexa.byte(fin_packet.construct(), 'utf-8')
 	s.sendto(message, (IP, port))
@@ -272,6 +277,7 @@ def closeConnection(clientConnection):
 						ack_packet.switchFlag("ACK")
 						ack_packet.setSeqNum(seq_num)
 						ack_packet.setAckNum(ack_num)
+						ack_packet.compileCheckSum()
 
 						message = hexa.byte(ack_packet.construct(), 'utf-8')
 						s.sendto(message, (IP, port))

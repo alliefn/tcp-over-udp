@@ -22,7 +22,7 @@ Pseudocode
 
 #--- Client compile file
 def saveFile(segmentPool, folderpath):
-	filename = input("\nSaving file...\n\nFile name: ")
+	filename = input("\nSaving file...\n\nFile name (without extension): ")
 	if ("." in filename):
 		filename = filename[0:filename.index(".")+1]
 	
@@ -34,8 +34,9 @@ def saveFile(segmentPool, folderpath):
 
 	res = pickle.loads(res)
 	res.name = filename
+	extension = res.extension
 
-	f = open(folderpath + "/" + res.name + ".txt", "wb")
+	f = open(folderpath + "/" + res.name + extension, "wb")
 	f.write(res.content)
 	f.close()
 
@@ -125,6 +126,7 @@ while (not(fin)):
 			ack_packet.switchFlag("ACK")
 			ack_packet.setSeqNum(seq_num)
 			ack_packet.setAckNum(ack_num)
+			ack_packet.compileCheckSum()
 
 			message = hexa.byte(ack_packet.construct(),'utf-8')
 			s.sendto(message, (address[0], address[1]))
@@ -165,17 +167,18 @@ while (not(fin)):
 			rec_packet = segment.Segment()
 			rec_packet.build(r.receiveSegment(data))
 
-			if (r.isDataSegment(rec_packet) and r.isNotBroken(r.receiveSegment(data))):
-				if (not r.isNotBroken(r.receiveSegment(data))):
-					print("\nPacket received is broken, resending...")
-					continue
+			if (not r.isNotBroken(r.receiveSegment(data))):
+				print("\nPacket received is broken, resending...")
+				continue
+
+			if (r.isDataSegment(rec_packet)):
 				seq_num0 = rec_packet.getSeqNum()
 				ack_num0 = rec_packet.getSeqNum()
 
 				print("\nData received with seq num: "+str(seq_num0)+" and ack num: "+str(ack_num0))
-				print(seq_num0)
-				print(serverConnection.server_seq_num)
-				print(serverConnection.n_data_received)
+				# print(seq_num0)
+				# print(serverConnection.server_seq_num)
+				# print(serverConnection.n_data_received)
 
 			#if (seq_num0 == serverConnection.server_seq_num + serverConnection.n_data_received):
 				received_data = rec_packet.getPayLoad()
@@ -191,6 +194,7 @@ while (not(fin)):
 				ack_packet.switchFlag("ACK")
 				ack_packet.setSeqNum(seq_num)
 				ack_packet.setAckNum(ack_num)
+				ack_packet.compileCheckSum()
 
 				message = hexa.byte(ack_packet.construct(),'utf-8')
 				s.sendto(message, (address[0], address[1]))
@@ -225,6 +229,7 @@ while (not(fin)):
 				ack_packet.switchFlag("ACK")
 				ack_packet.setSeqNum(seq_num)
 				ack_packet.setAckNum(ack_num)
+				ack_packet.compileCheckSum()
 
 				message = hexa.byte(ack_packet.construct(),'utf-8')
 				s.sendto(message, (address[0], address[1]))
@@ -243,6 +248,7 @@ while (not(fin)):
 				fin_packet.switchFlag("FIN")
 				fin_packet.setSeqNum(seq_num)
 				fin_packet.setAckNum(ack_num)
+				fin_packet.compileCheckSum()
 
 				message = hexa.byte(fin_packet.construct(),'utf-8')
 				s.sendto(message, (address[0], address[1]))
